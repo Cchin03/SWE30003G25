@@ -101,7 +101,8 @@ export default function StaffContentPage() {
   const [questions, setQuestions] = useState<QuizQuestion[]>([
     { question: '', options: ['', '', '', ''], answer: '' },
   ])
-  // Track correct answer by index in UI; converted to text on save 
+  // Track correct answer by index in UI; converted to text on save
+  // This is a common convention meaning "nothing selected yet" or "no valid answer chosen." for [-1] 
   const [answerIndexes, setAnswerIndexes] = useState<number[]>([-1])
 
   // Step 3

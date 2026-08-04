@@ -66,8 +66,9 @@ export default function EnquiryPage() {
       if (error) throw new Error(error.message)
       const rows = data ?? []
       setEnquiries(rows)
-
+  
       // Compute which responded enquiries haven't been seen yet (WC)
+      // store data in browser
       const seenRaw = localStorage.getItem(`seen_responses_${petOwnerID}`)
       const seen: string[] = seenRaw ? JSON.parse(seenRaw) : []
       const unread = rows

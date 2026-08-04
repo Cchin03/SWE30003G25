@@ -44,6 +44,32 @@ export default function VideoPage() {
   const [loadingVideo, setLoadingVideo] = useState(false)
   const [error, setError] = useState('')
 
+  //  Permission state 
+  const [isPetOwner, setIsPetOwner] = useState(false)
+  const [authLoading, setAuthLoading] = useState(true)
+
+  useEffect(() => {
+    async function checkRole() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single()
+
+        if (profile?.role === 'pet_owner') {
+          setIsPetOwner(true)
+        }
+      } finally {
+        setAuthLoading(false)
+      }
+    }
+    checkRole()
+  }, [])
+
   // Fetch available pet types — published only (WC)
   useEffect(() => {
     async function loadPetTypes() {
@@ -119,12 +145,17 @@ export default function VideoPage() {
   }
 
   function reset() {
-    setStep('pet'); setSelectedPet(''); setSelectedCategory(''); setVideo(null); setError('')
+    setStep('pet'); 
+    setSelectedPet(''); 
+    setSelectedCategory(''); 
+    setVideo(null); 
+    setError('')
   }
 
   return (
     <main>
       <Navbar />
+      
 
       <section style={{ minHeight: '80vh', backgroundColor: '#f9fafb', padding: '40px 16px' }}>
         <div style={{ maxWidth: '760px', margin: '0 auto' }}>
@@ -138,149 +169,213 @@ export default function VideoPage() {
             <p style={{ color: '#6b7280', fontSize: '14px' }}>Watch expert pet first-aid demonstrations.</p>
           </div>
 
-          {/* Breadcrumb */}
-          {(selectedPet || selectedCategory) && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#6b7280', marginBottom: '20px', flexWrap: 'wrap' }}>
-              <button onClick={reset} style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', padding: 0, fontWeight: '500' }}>All Pets</button>
-              {selectedPet && (
-                <>
-                  <span>›</span>
-                  <button
-                    onClick={() => { setStep('category'); setSelectedCategory(''); setVideo(null) }}
-                    style={{ background: 'none', border: 'none', color: selectedCategory ? '#3b82f6' : '#111827', cursor: selectedCategory ? 'pointer' : 'default', padding: 0, fontWeight: '500' }}
-                  >
-                    {PET_EMOJI[selectedPet] ?? '🐾'} {selectedPet}
-                  </button>
-                </>
-              )}
-              {selectedCategory && (
-                <>
-                  <span>›</span>
-                  <span style={{ color: '#111827', fontWeight: '500' }}>{CATEGORY_EMOJI[selectedCategory] ?? '🚨'} {selectedCategory}</span>
-                </>
-              )}
+          {/* Auth loading spinner */}
+          {authLoading && (
+            <div style={{ textAlign: 'center', padding: '60px 0', color: '#9ca3af', fontSize: '15px' }}>
+              Checking access...
             </div>
           )}
 
-          {error && (
-            <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '12px 16px', color: '#dc2626', fontSize: '14px', marginBottom: '20px' }}>
-              ✗ {error}
+          {/* Access denied screen */}
+          {!authLoading && !isPetOwner && (
+            <div style={{
+              marginTop: '32px',
+              backgroundColor: 'white',
+              border: '1px solid #fde68a',
+              borderRadius: '16px',
+              padding: '48px 32px',
+              textAlign: 'center',
+              boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+            }}>
+              <div style={{ fontSize: '56px', marginBottom: '16px' }}>🔒</div>
+              <h2 style={{ fontSize: '22px', fontWeight: '700', color: '#111827', marginBottom: '10px' }}>
+                Pet Owners Only
+              </h2>
+              <p style={{ color: '#6b7280', fontSize: '15px', maxWidth: '420px', margin: '0 auto 28px', lineHeight: '1.6' }}>
+                The First-Aid Guide is available to registered Pet Owners only.
+                Please log in with a Pet Owner account to access this content.
+              </p>
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                <Link
+                  href="/login"
+                  style={{
+                    padding: '10px 28px',
+                    backgroundColor: '#dc2626',
+                    color: 'white',
+                    borderRadius: '6px',
+                    fontWeight: '600',
+                    textDecoration: 'none',
+                    fontSize: '14px',
+                  }}
+                >
+                  Login
+                </Link>
+                <Link
+                  href="/register"
+                  style={{
+                    padding: '10px 28px',
+                    backgroundColor: 'white',
+                    color: '#dc2626',
+                    border: '1.5px solid #dc2626',
+                    borderRadius: '6px',
+                    fontWeight: '600',
+                    textDecoration: 'none',
+                    fontSize: '14px',
+                  }}
+                >
+                  Register as Pet Owner
+                </Link>
+              </div>
             </div>
           )}
 
-          {/* Pet selection */}
-          {step === 'pet' && (
-            loadingPets ? <p style={{ color: '#9ca3af', fontSize: '14px' }}>Loading…</p> :
-            petTypes.length === 0 ? (
-              <div style={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '40px', textAlign: 'center' }}>
-                <p style={{ color: '#9ca3af', fontSize: '14px' }}>No videos available yet.</p>
-              </div>
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '12px' }}>
-                {petTypes.map(pet => (
-                  <button key={pet} onClick={() => handleSelectPet(pet)}
-                    style={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '14px', padding: '24px 16px', textAlign: 'center', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', transition: 'all 0.15s' }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#3b82f6'; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 0 0 3px rgba(59,130,246,0.1)' }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#e5e7eb'; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 1px 3px rgba(0,0,0,0.06)' }}
-                  >
-                    <div style={{ fontSize: '36px', marginBottom: '10px' }}>{PET_EMOJI[pet] ?? '🐾'}</div>
-                    <p style={{ fontWeight: '600', fontSize: '14px', color: '#111827' }}>{pet}</p>
-                  </button>
-                ))}
-              </div>
-            )
-          )}
-
-          {/* Category selection */}
-          {step === 'category' && (
-            loadingCats ? <p style={{ color: '#9ca3af', fontSize: '14px' }}>Loading categories…</p> :
-            categories.length === 0 ? (
-              <div style={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '40px', textAlign: 'center' }}>
-                <p style={{ color: '#9ca3af', fontSize: '14px' }}>No videos available for {selectedPet} yet.</p>
-              </div>
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: '12px' }}>
-                {categories.map(cat => (
-                  <button key={cat} onClick={() => handleSelectCategory(cat)}
-                    style={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '14px', padding: '20px 16px', textAlign: 'left', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', transition: 'all 0.15s' }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#3b82f6'; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 0 0 3px rgba(59,130,246,0.1)' }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#e5e7eb'; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 1px 3px rgba(0,0,0,0.06)' }}
-                  >
-                    <p style={{ fontSize: '22px', marginBottom: '8px' }}>{CATEGORY_EMOJI[cat] ?? '🚨'}</p>
-                    <p style={{ fontWeight: '600', fontSize: '14px', color: '#111827' }}>{cat}</p>
-                  </button>
-                ))}
-              </div>
-            )
-          )}
-
-          {/* Video viewer */}
-          {step === 'video' && (
-            loadingVideo ? (
-              <p style={{ color: '#9ca3af', fontSize: '14px' }}>Loading video…</p>
-            ) : !video ? (
-              <div style={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '14px', padding: '48px 24px', textAlign: 'center' }}>
-                <div style={{ fontSize: '40px', marginBottom: '12px', opacity: 0.3 }}>🎬</div>
-                <p style={{ color: '#9ca3af', fontSize: '14px' }}>No video available for {selectedPet} — {selectedCategory} yet.</p>
-              </div>
-            ) : (
-              <div style={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,0.07)' }}>
-                {/* Video player */}
-                <div style={{ position: 'relative', paddingBottom: '56.25%', backgroundColor: '#111' }}>
-                  <iframe
-                    src={toEmbedUrl(video.videoUrl)}
-                    title={video.title}
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
-                  />
-                  {/* Fallback — always visible if embed is blocked */}
-                  <div style={{ position: 'absolute', bottom: '12px', right: '12px' }}>
-                    <a
-                      href={video.videoUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      style={{
-                        display: 'inline-flex', alignItems: 'center', gap: '6px',
-                        backgroundColor: '#ff0000', color: 'white',
-                        fontSize: '12px', fontWeight: '600',
-                        padding: '6px 12px', borderRadius: '6px',
-                        textDecoration: 'none',
-                      }}
+          {/* Main guide content — only shown to pet owners */}
+          {!authLoading && isPetOwner && (
+            <>
+            {/* Breadcrumb */}
+            {(selectedPet || selectedCategory) && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#6b7280', marginBottom: '20px', flexWrap: 'wrap' }}>
+                <button onClick={reset} style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', padding: 0, fontWeight: '500' }}>All Pets</button>
+                {selectedPet && (
+                  <>
+                    <button
+                      onClick={() => { setStep('category'); setSelectedCategory(''); setVideo(null) }}
+                      style={{ background: 'none', border: 'none', color: selectedCategory ? '#3b82f6' : '#111827', cursor: selectedCategory ? 'pointer' : 'default', padding: 0, fontWeight: '500' }}
                     >
-                      ▶ Watch on YouTube
-                    </a>
-                  </div>
-                </div>
+                      {PET_EMOJI[selectedPet] ?? '🐾'} {selectedPet}
+                    </button>
+                  </>
+                )}
+                {selectedCategory && (
+                  <>
+                    <span>›</span>
+                    <span style={{ color: '#111827', fontWeight: '500' }}>{CATEGORY_EMOJI[selectedCategory] ?? '🚨'} {selectedCategory}</span>
+                  </>
+                )}
+              </div>
+            )}
 
-                {/* Video meta */}
-                <div style={{ padding: '20px 24px' }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', marginBottom: '10px' }}>
-                    <h2 style={{ fontWeight: 'bold', fontSize: '18px', color: '#111827', margin: 0 }}>{video.title}</h2>
-                    {video.duration && (
-                      <span style={{ fontSize: '12px', backgroundColor: '#f3f4f6', color: '#6b7280', padding: '4px 10px', borderRadius: '999px', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                        ⏱ {video.duration}
+            {error && (
+              <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '12px 16px', color: '#dc2626', fontSize: '14px', marginBottom: '20px' }}>
+                ✗ {error}
+              </div>
+            )}
+
+            {/* Pet selection */}
+            {step === 'pet' && (
+              loadingPets ? <p style={{ color: '#9ca3af', fontSize: '14px' }}>Loading…</p> :
+              petTypes.length === 0 ? (
+                <div style={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '40px', textAlign: 'center' }}>
+                  <p style={{ color: '#9ca3af', fontSize: '14px' }}>No videos available yet.</p>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '12px' }}>
+                  {petTypes.map(pet => (
+                    <button key={pet} onClick={() => handleSelectPet(pet)}
+                      style={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '14px', padding: '24px 16px', textAlign: 'center', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', transition: 'all 0.15s' }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#3b82f6'; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 0 0 3px rgba(59,130,246,0.1)' }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#e5e7eb'; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 1px 3px rgba(0,0,0,0.06)' }}
+                    >
+                      <div style={{ fontSize: '36px', marginBottom: '10px' }}>{PET_EMOJI[pet] ?? '🐾'}</div>
+                      <p style={{ fontWeight: '600', fontSize: '14px', color: '#111827' }}>{pet}</p>
+                    </button>
+                  ))}
+                </div>
+              )
+            )}
+
+            {/* Category selection */}
+            {step === 'category' && (
+              loadingCats ? <p style={{ color: '#9ca3af', fontSize: '14px' }}>Loading categories…</p> :
+              categories.length === 0 ? (
+                <div style={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '40px', textAlign: 'center' }}>
+                  <p style={{ color: '#9ca3af', fontSize: '14px' }}>No videos available for {selectedPet} yet.</p>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: '12px' }}>
+                  {categories.map(cat => (
+                    <button key={cat} onClick={() => handleSelectCategory(cat)}
+                      style={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '14px', padding: '20px 16px', textAlign: 'left', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', transition: 'all 0.15s' }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#3b82f6'; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 0 0 3px rgba(59,130,246,0.1)' }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#e5e7eb'; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 1px 3px rgba(0,0,0,0.06)' }}
+                    >
+                      <p style={{ fontSize: '22px', marginBottom: '8px' }}>{CATEGORY_EMOJI[cat] ?? '🚨'}</p>
+                      <p style={{ fontWeight: '600', fontSize: '14px', color: '#111827' }}>{cat}</p>
+                    </button>
+                  ))}
+                </div>
+              )
+            )}
+
+            {/* Video viewer */}
+            {step === 'video' && (
+              loadingVideo ? (
+                <p style={{ color: '#9ca3af', fontSize: '14px' }}>Loading video…</p>
+              ) : !video ? (
+                <div style={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '14px', padding: '48px 24px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '40px', marginBottom: '12px', opacity: 0.3 }}>🎬</div>
+                  <p style={{ color: '#9ca3af', fontSize: '14px' }}>No video available for {selectedPet} — {selectedCategory} yet.</p>
+                </div>
+              ) : (
+                <div style={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,0.07)' }}>
+                  {/* Video player */}
+                  <div style={{ position: 'relative', paddingBottom: '56.25%', backgroundColor: '#111' }}>
+                    <iframe
+                      src={toEmbedUrl(video.videoUrl)}
+                      title={video.title}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
+                    />
+                    {/* Fallback — always visible if embed is blocked */}
+                    <div style={{ position: 'absolute', bottom: '12px', right: '12px' }}>
+                      <a
+                        href={video.videoUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: '6px',
+                          backgroundColor: '#ff0000', color: 'white',
+                          fontSize: '12px', fontWeight: '600',
+                          padding: '6px 12px', borderRadius: '6px',
+                          textDecoration: 'none',
+                        }}
+                      >
+                        ▶ Watch on YouTube
+                      </a>
+                    </div>
+                  </div>
+
+                  {/* Video meta */}
+                  <div style={{ padding: '20px 24px' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', marginBottom: '10px' }}>
+                      <h2 style={{ fontWeight: 'bold', fontSize: '18px', color: '#111827', margin: 0 }}>{video.title}</h2>
+                      {video.duration && (
+                        <span style={{ fontSize: '12px', backgroundColor: '#f3f4f6', color: '#6b7280', padding: '4px 10px', borderRadius: '999px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                          ⏱ {video.duration}
+                        </span>
+                      )}
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '8px', marginBottom: '14px', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '12px', backgroundColor: '#eff6ff', color: '#1d4ed8', padding: '3px 10px', borderRadius: '999px', fontWeight: '500' }}>
+                        {PET_EMOJI[selectedPet] ?? '🐾'} {selectedPet}
                       </span>
+                      <span style={{ fontSize: '12px', backgroundColor: '#fef9c3', color: '#854d0e', padding: '3px 10px', borderRadius: '999px', fontWeight: '500' }}>
+                        {CATEGORY_EMOJI[selectedCategory] ?? '🚨'} {selectedCategory}
+                      </span>
+                    </div>
+
+                    {video.description && (
+                      <p style={{ fontSize: '14px', color: '#4b5563', lineHeight: '1.7' }}>
+                        {video.description}
+                      </p>
                     )}
                   </div>
-
-                  <div style={{ display: 'flex', gap: '8px', marginBottom: '14px', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '12px', backgroundColor: '#eff6ff', color: '#1d4ed8', padding: '3px 10px', borderRadius: '999px', fontWeight: '500' }}>
-                      {PET_EMOJI[selectedPet] ?? '🐾'} {selectedPet}
-                    </span>
-                    <span style={{ fontSize: '12px', backgroundColor: '#fef9c3', color: '#854d0e', padding: '3px 10px', borderRadius: '999px', fontWeight: '500' }}>
-                      {CATEGORY_EMOJI[selectedCategory] ?? '🚨'} {selectedCategory}
-                    </span>
-                  </div>
-
-                  {video.description && (
-                    <p style={{ fontSize: '14px', color: '#4b5563', lineHeight: '1.7' }}>
-                      {video.description}
-                    </p>
-                  )}
                 </div>
-              </div>
-            )
+              )
+            )}
+          </>
           )}
         </div>
       </section>

@@ -38,6 +38,32 @@ export default function QuizPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+    //  Permission state 
+  const [isPetOwner, setIsPetOwner] = useState(false)
+  const [authLoading, setAuthLoading] = useState(true)
+
+  useEffect(() => {
+    async function checkRole() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single()
+
+        if (profile?.role === 'pet_owner') {
+          setIsPetOwner(true)
+        }
+      } finally {
+        setAuthLoading(false)
+      }
+    }
+    checkRole()
+  }, [])
+
   // Load pet types with published content on mount
   useEffect(() => {
     async function loadPetTypes() {
@@ -169,162 +195,227 @@ export default function QuizPage() {
         </div>
       )}
 
-      <div style={{ maxWidth: "900px", margin: "0 auto", backgroundColor: "white", borderRadius: "16px", padding: "40px", boxShadow: "0 2px 10px rgba(0,0,0,0.1)" }}>
-
+      <section style={{ minHeight: '80vh', backgroundColor: '#f9fafb', padding: '40px 16px' }}>
+        <div style={{ maxWidth: '760px', margin: '0 auto' }}>
         {/* Back link */}
         <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#6b7280', fontSize: '14px', marginBottom: '24px', textDecoration: 'none' }}>
-          ← Back to Dashboard
+          ← Back to Homepage
         </Link>
 
-        {/* Header */}
-        <h1 style={{ fontSize: "36px", fontWeight: "bold", marginBottom: "10px", color: "#111827" }}>
-          Pet First Aid Quiz
-        </h1>
-
-        {/* Breadcrumb */}
-        {(selectedPet || selectedCategory) && (
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "#6b7280", marginBottom: "24px", flexWrap: "wrap" }}>
-            <button onClick={reset} style={{ background: "none", border: "none", color: "#3b82f6", cursor: "pointer", padding: 0, fontWeight: "500" }}>
-              All Pets
-            </button>
-            {selectedPet && (
-              <>
-                <span>›</span>
-                <button
-                  onClick={() => { setStep("category"); setSelectedCategory(""); setError(""); }}
-                  style={{ background: "none", border: "none", color: selectedCategory ? "#3b82f6" : "#111827", cursor: selectedCategory ? "pointer" : "default", padding: 0, fontWeight: "500" }}
-                >
-                  {PET_EMOJI[selectedPet] ?? "🐾"} {selectedPet}
-                </button>
-              </>
-            )}
-            {selectedCategory && (
-              <>
-                <span>›</span>
-                <span style={{ color: "#111827", fontWeight: "500" }}>{CATEGORY_EMOJI[selectedCategory] ?? "🚨"} {selectedCategory}</span>
-              </>
-            )}
-          </div>
-        )}
-
-        {/* Error */}
-        {error && (
-          <div style={{ backgroundColor: "#fef2f2", border: "1px solid #fecaca", borderRadius: "10px", padding: "12px 16px", color: "#dc2626", fontSize: "14px", marginBottom: "20px" }}>
-            ✗ {error}
-          </div>
-        )}
-
-        {/* Step: Pet selection */}
-        {step === "pet" && (
-          <>
-            <p style={{ marginBottom: "24px", color: "#6b7280", fontSize: "16px" }}>Select your pet to begin.</p>
-            {loadingPets ? (
-              <p style={{ color: "#9ca3af", fontSize: "14px" }}>Loading…</p>
-            ) : petTypes.length === 0 ? (
-              <p style={{ color: "#9ca3af", fontSize: "14px" }}>No quizzes available yet.</p>
-            ) : (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: "12px" }}>
-                {petTypes.map(pet => (
-                  <button key={pet} onClick={() => handleSelectPet(pet)}
-                    style={{ backgroundColor: "white", border: "1px solid #e5e7eb", borderRadius: "14px", padding: "24px 16px", textAlign: "center", cursor: "pointer", boxShadow: "0 1px 3px rgba(0,0,0,0.06)", transition: "all 0.15s" }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "#2563eb"; (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 0 3px rgba(37,99,235,0.1)"; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "#e5e7eb"; (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 1px 3px rgba(0,0,0,0.06)"; }}
-                  >
-                    <div style={{ fontSize: "36px", marginBottom: "10px" }}>{PET_EMOJI[pet] ?? "🐾"}</div>
-                    <p style={{ fontWeight: "600", fontSize: "14px", color: "#111827", margin: 0 }}>{pet}</p>
-                  </button>
-                ))}
+        <div style={{ marginBottom: '28px' }}>
+          <h1 style={{ fontSize: '26px', fontWeight: 'bold', color: '#111827', marginBottom: '6px' }}> First aid Quiz</h1>
+          <p style={{ color: '#6b7280', fontSize: '14px' }}>Test your knowledge of pet first-aid procedures.</p>
+        </div>
+      
+          {/* Auth loading spinner */}
+            {authLoading && (
+              <div style={{ textAlign: 'center', padding: '60px 0', color: '#9ca3af', fontSize: '15px' }}>
+                Checking access...
               </div>
             )}
-          </>
-        )}
 
-        {/* Step: Category selection */}
-        {step === "category" && (
-          <>
-            <p style={{ marginBottom: "24px", color: "#6b7280", fontSize: "16px" }}>
-              Choose an emergency category for <strong>{selectedPet}</strong>.
-            </p>
-            {loadingCats ? (
-              <p style={{ color: "#9ca3af", fontSize: "14px" }}>Loading categories…</p>
-            ) : categories.length === 0 ? (
-              <p style={{ color: "#9ca3af", fontSize: "14px" }}>No quizzes available for {selectedPet} yet.</p>
-            ) : (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))", gap: "12px" }}>
-                {categories.map(cat => (
-                  <button key={cat} onClick={() => handleSelectCategory(cat)}
-                    style={{ backgroundColor: "white", border: "1px solid #e5e7eb", borderRadius: "14px", padding: "20px 16px", textAlign: "left", cursor: "pointer", boxShadow: "0 1px 3px rgba(0,0,0,0.06)", transition: "all 0.15s" }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "#2563eb"; (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 0 3px rgba(37,99,235,0.1)"; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "#e5e7eb"; (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 1px 3px rgba(0,0,0,0.06)"; }}
-                  >
-                    <p style={{ fontSize: "22px", margin: "0 0 8px" }}>{CATEGORY_EMOJI[cat] ?? "🚨"}</p>
-                    <p style={{ fontWeight: "600", fontSize: "14px", color: "#111827", margin: 0 }}>{cat}</p>
-                  </button>
-                ))}
-              </div>
-            )}
-          </>
-        )}
-
-        {/* Step: Quiz */}
-        {step === "quiz" && (
-          <>
-            {loading ? (
-              <p style={{ color: "#9ca3af", fontSize: "14px" }}>Loading questions…</p>
-            ) : (
-              <>
-                <p style={{ marginBottom: "8px", color: "#6b7280", fontSize: "16px" }}>Quiz ID: {quizID}</p>
-                <p style={{ marginBottom: "30px", color: "#6b7280", fontSize: "16px" }}>
-                  Answer all {totalMark} questions to test your knowledge.
+            {/* Access denied screen */}
+            {!authLoading && !isPetOwner && (
+              <div style={{
+                marginTop: '32px',
+                backgroundColor: 'white',
+                border: '1px solid #fde68a',
+                borderRadius: '16px',
+                padding: '48px 32px',
+                textAlign: 'center',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+              }}>
+                <div style={{ fontSize: '56px', marginBottom: '16px' }}>🔒</div>
+                <h2 style={{ fontSize: '22px', fontWeight: '700', color: '#111827', marginBottom: '10px' }}>
+                  Pet Owners Only
+                </h2>
+                <p style={{ color: '#6b7280', fontSize: '15px', maxWidth: '420px', margin: '0 auto 28px', lineHeight: '1.6' }}>
+                  The First-Aid Guide is available to registered Pet Owners only.
+                  Please log in with a Pet Owner account to access this content.
                 </p>
-
-                {questions.map((q, index) => (
-                  <div key={q.id} style={{ marginBottom: "28px", padding: "24px", borderRadius: "12px", border: "1px solid #e5e7eb", backgroundColor: "#fafafa" }}>
-                    <h2 style={{ fontSize: "18px", fontWeight: "600", marginBottom: "18px", color: "#111827" }}>
-                      {index + 1}. {q.question}
-                    </h2>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                      {q.options.map(option => {
-                        const isSelected = selectedAnswers[index] === option;
-                        const isCorrect = option === q.answer;
-                        const isWrong = submitted && isSelected && !isCorrect;
-                        return (
-                          <label key={option} style={{
-                            display: "flex", alignItems: "center", gap: "12px", padding: "14px", borderRadius: "10px",
-                            border: submitted ? (isCorrect ? "2px solid #16a34a" : isWrong ? "2px solid #dc2626" : "1px solid #d1d5db") : "1px solid #d1d5db",
-                            backgroundColor: submitted ? (isCorrect ? "#dcfce7" : isWrong ? "#fee2e2" : "white") : "white",
-                            cursor: submitted ? "not-allowed" : "pointer",
-                          }}>
-                            <input type="radio" name={`question-${index}`} value={option} disabled={submitted} checked={isSelected} onChange={() => handleSelect(index, option)} />
-                            <span>{option}</span>
-                            {submitted && isCorrect && <span style={{ marginLeft: "auto", color: "#166534", fontWeight: "600" }}>Correct</span>}
-                            {submitted && isWrong && <span style={{ marginLeft: "auto", color: "#991b1b", fontWeight: "600" }}>Your answer</span>}
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-
-                {!submitted ? (
-                  <button onClick={submitQuiz} style={{ width: "100%", backgroundColor: "#2563eb", color: "white", padding: "16px", borderRadius: "12px", border: "none", fontWeight: "600", fontSize: "16px", cursor: "pointer" }}>
-                    Submit Quiz
-                  </button>
-                ) : (
-                  <div style={{ display: "flex", gap: "12px" }}>
-                    <button onClick={retakeQuiz} style={{ flex: 1, backgroundColor: "#16a34a", color: "white", padding: "16px", borderRadius: "12px", border: "none", fontWeight: "600", fontSize: "16px", cursor: "pointer" }}>
-                      Retake Quiz
-                    </button>
-                    <button onClick={reset} style={{ flex: 1, backgroundColor: "#f3f4f6", color: "#374151", padding: "16px", borderRadius: "12px", border: "none", fontWeight: "600", fontSize: "16px", cursor: "pointer" }}>
-                      Try Another Category
-                    </button>
-                  </div>
-                )}
-              </>
+                <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                  <Link
+                    href="/login"
+                    style={{
+                      padding: '10px 28px',
+                      backgroundColor: '#dc2626',
+                      color: 'white',
+                      borderRadius: '6px',
+                      fontWeight: '600',
+                      textDecoration: 'none',
+                      fontSize: '14px',
+                    }}
+                  >
+                    Login
+                  </Link>
+                  <Link
+                    href="/register"
+                    style={{
+                      padding: '10px 28px',
+                      backgroundColor: 'white',
+                      color: '#dc2626',
+                      border: '1.5px solid #dc2626',
+                      borderRadius: '6px',
+                      fontWeight: '600',
+                      textDecoration: 'none',
+                      fontSize: '14px',
+                    }}
+                  >
+                    Register as Pet Owner
+                  </Link>
+                </div>
+              </div>
             )}
+        {/* Main guide content — only shown to pet owners */}
+        {!authLoading && isPetOwner && (
+          <>
+          {/* Breadcrumb */}
+          {(selectedPet || selectedCategory) && (
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "#6b7280", marginBottom: "24px", flexWrap: "wrap" }}>
+              <button onClick={reset} style={{ background: "none", border: "none", color: "#3b82f6", cursor: "pointer", padding: 0, fontWeight: "500" }}>
+                All Pets
+              </button>
+              {selectedPet && (
+                <>
+                  <span>›</span>
+                  <button
+                    onClick={() => { setStep("category"); setSelectedCategory(""); setError(""); }}
+                    style={{ background: "none", border: "none", color: selectedCategory ? "#3b82f6" : "#111827", cursor: selectedCategory ? "pointer" : "default", padding: 0, fontWeight: "500" }}
+                  >
+                    {PET_EMOJI[selectedPet] ?? "🐾"} {selectedPet}
+                  </button>
+                </>
+              )}
+              {selectedCategory && (
+                <>
+                  <span>›</span>
+                  <span style={{ color: "#111827", fontWeight: "500" }}>{CATEGORY_EMOJI[selectedCategory] ?? "🚨"} {selectedCategory}</span>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Error */}
+          {error && (
+            <div style={{ backgroundColor: "#fef2f2", border: "1px solid #fecaca", borderRadius: "10px", padding: "12px 16px", color: "#dc2626", fontSize: "14px", marginBottom: "20px" }}>
+              ✗ {error}
+            </div>
+          )}
+
+          {/* Step: Pet selection */}
+          {step === "pet" && (
+            <>
+              <p style={{ marginBottom: "24px", color: "#6b7280", fontSize: "16px" }}>Select your pet to begin.</p>
+              {loadingPets ? (
+                <p style={{ color: "#9ca3af", fontSize: "14px" }}>Loading…</p>
+              ) : petTypes.length === 0 ? (
+                <p style={{ color: "#9ca3af", fontSize: "14px" }}>No quizzes available yet.</p>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: "12px" }}>
+                  {petTypes.map(pet => (
+                    <button key={pet} onClick={() => handleSelectPet(pet)}
+                      style={{ backgroundColor: "white", border: "1px solid #e5e7eb", borderRadius: "14px", padding: "24px 16px", textAlign: "center", cursor: "pointer", boxShadow: "0 1px 3px rgba(0,0,0,0.06)", transition: "all 0.15s" }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "#2563eb"; (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 0 3px rgba(37,99,235,0.1)"; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "#e5e7eb"; (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 1px 3px rgba(0,0,0,0.06)"; }}
+                    >
+                      <div style={{ fontSize: "36px", marginBottom: "10px" }}>{PET_EMOJI[pet] ?? "🐾"}</div>
+                      <p style={{ fontWeight: "600", fontSize: "14px", color: "#111827", margin: 0 }}>{pet}</p>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Step: Category selection */}
+          {step === "category" && (
+            <>
+              <p style={{ marginBottom: "24px", color: "#6b7280", fontSize: "16px" }}>
+                Choose an emergency category for <strong>{selectedPet}</strong>.
+              </p>
+              {loadingCats ? (
+                <p style={{ color: "#9ca3af", fontSize: "14px" }}>Loading categories…</p>
+              ) : categories.length === 0 ? (
+                <p style={{ color: "#9ca3af", fontSize: "14px" }}>No quizzes available for {selectedPet} yet.</p>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))", gap: "12px" }}>
+                  {categories.map(cat => (
+                    <button key={cat} onClick={() => handleSelectCategory(cat)}
+                      style={{ backgroundColor: "white", border: "1px solid #e5e7eb", borderRadius: "14px", padding: "20px 16px", textAlign: "left", cursor: "pointer", boxShadow: "0 1px 3px rgba(0,0,0,0.06)", transition: "all 0.15s" }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "#2563eb"; (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 0 3px rgba(37,99,235,0.1)"; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "#e5e7eb"; (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 1px 3px rgba(0,0,0,0.06)"; }}
+                    >
+                      <p style={{ fontSize: "22px", margin: "0 0 8px" }}>{CATEGORY_EMOJI[cat] ?? "🚨"}</p>
+                      <p style={{ fontWeight: "600", fontSize: "14px", color: "#111827", margin: 0 }}>{cat}</p>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Step: Quiz */}
+          {step === "quiz" && (
+            <>
+              {loading ? (
+                <p style={{ color: "#9ca3af", fontSize: "14px" }}>Loading questions…</p>
+              ) : (
+                <>
+                  <p style={{ marginBottom: "8px", color: "#6b7280", fontSize: "16px" }}>Quiz ID: {quizID}</p>
+                  <p style={{ marginBottom: "30px", color: "#6b7280", fontSize: "16px" }}>
+                    Answer all {totalMark} questions to test your knowledge.
+                  </p>
+
+                  {questions.map((q, index) => (
+                    <div key={q.id} style={{ marginBottom: "28px", padding: "24px", borderRadius: "12px", border: "1px solid #e5e7eb", backgroundColor: "#fafafa" }}>
+                      <h2 style={{ fontSize: "18px", fontWeight: "600", marginBottom: "18px", color: "#111827" }}>
+                        {index + 1}. {q.question}
+                      </h2>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                        {q.options.map(option => {
+                          const isSelected = selectedAnswers[index] === option;
+                          const isCorrect = option === q.answer;
+                          const isWrong = submitted && isSelected && !isCorrect;
+                          return (
+                            <label key={option} style={{
+                              display: "flex", alignItems: "center", gap: "12px", padding: "14px", borderRadius: "10px",
+                              border: submitted ? (isCorrect ? "2px solid #16a34a" : isWrong ? "2px solid #dc2626" : "1px solid #d1d5db") : "1px solid #d1d5db",
+                              backgroundColor: submitted ? (isCorrect ? "#dcfce7" : isWrong ? "#fee2e2" : "white") : "white",
+                              cursor: submitted ? "not-allowed" : "pointer",
+                            }}>
+                              <input type="radio" name={`question-${index}`} value={option} disabled={submitted} checked={isSelected} onChange={() => handleSelect(index, option)} />
+                              <span>{option}</span>
+                              {submitted && isCorrect && <span style={{ marginLeft: "auto", color: "#166534", fontWeight: "600" }}>Correct</span>}
+                              {submitted && isWrong && <span style={{ marginLeft: "auto", color: "#991b1b", fontWeight: "600" }}>Your answer</span>}
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+
+                  {!submitted ? (
+                    <button onClick={submitQuiz} style={{ width: "100%", backgroundColor: "#2563eb", color: "white", padding: "16px", borderRadius: "12px", border: "none", fontWeight: "600", fontSize: "16px", cursor: "pointer" }}>
+                      Submit Quiz
+                    </button>
+                  ) : (
+                    <div style={{ display: "flex", gap: "12px" }}>
+                      <button onClick={retakeQuiz} style={{ flex: 1, backgroundColor: "#16a34a", color: "white", padding: "16px", borderRadius: "12px", border: "none", fontWeight: "600", fontSize: "16px", cursor: "pointer" }}>
+                        Retake Quiz
+                      </button>
+                      <button onClick={reset} style={{ flex: 1, backgroundColor: "#f3f4f6", color: "#374151", padding: "16px", borderRadius: "12px", border: "none", fontWeight: "600", fontSize: "16px", cursor: "pointer" }}>
+                        Try Another Category
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </>
+          )}
           </>
-        )}
+          )}
       </div>
+    </section>
     </div>
   );
 }

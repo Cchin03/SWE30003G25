@@ -9,8 +9,9 @@ import {
   getPetTypes,
   getEmergencyCategories,
   viewSteps,
+  PET_EMOJI,
+  CATEGORY_EMOJI,
   type Guide,
-  type EducationalVideo,
 } from '@/lib/content'
 import supabase from '@/lib/supabase'
 
@@ -40,16 +41,6 @@ function toEmbedUrl(url: string): string | null {
   return null
 }
 
-// GuidePage is the main interface for pet owners to access first-aid guides for their pets. It allows users to select their pet type and the emergency category to view step-by-step instructions and educational videos. The page also handles user authentication to ensure that only registered pet owners can access the content. (WC)
-const CATEGORY_EMOJI: Record<string, string> = {
-  Choking: '😮', Bleeding: '🩸', Burns: '🔥', Fracture: '🦴',
-  Poisoning: '☠️', Seizure: '⚡',
-}
-
-const PET_EMOJI: Record<string, string> = {
-  Dog: '🐕', Cat: '🐈', Bird: '🐦', Rabbit: '🐇', Other: '🐾',
-}
-
 // The GuidePage component manages the state and logic for displaying first-aid guides based on user selections. It fetches the available pet types and emergency categories from the backend, handles user interactions for selecting a pet and category, and retrieves the corresponding guide steps and educational videos. 
 // The component also includes error handling and loading states to enhance the user experience. (WC)
 export default function GuidePage() {
@@ -57,7 +48,6 @@ export default function GuidePage() {
   const [petTypes, setPetTypes] = useState<string[]>([])
   const [categories, setCategories] = useState<string[]>([])
   const [guides, setGuides] = useState<Guide[]>([])
-  const [video, setVideo] = useState<EducationalVideo | null>(null)
 
   const [selectedPet, setSelectedPet] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('')
@@ -128,7 +118,6 @@ export default function GuidePage() {
     setSelectedPet(pet)
     setSelectedCategory('')
     setGuides([])
-    setVideo(null)
     setStep('category')
     setLoadingCats(true)
     setError('')
@@ -189,30 +178,18 @@ export default function GuidePage() {
 
       const [steps] = await Promise.all([viewSteps(cid)])
       setGuides(steps)
-      if (steps.length > 0) {
-        const { data: vidData, error: vidErr } = await supabase
-          .from('educational_video')
-          .select('*')
-          .eq('contentID', cid)
-          .maybeSingle()
-        if (vidErr) throw new Error(vidErr.message)
-        setVideo(vidData ?? null)
-      } else {
-        setVideo(null)
-      }
     } catch (e: any) {
       setError(e.message)
     } finally {
       setLoadingGuide(false)
     }
   }
-
+  // redirect back clear seleted pet data
   function reset() {
     setStep('pet')
     setSelectedPet('')
     setSelectedCategory('')
     setGuides([])
-    setVideo(null)
     setContentID('')
     setActiveStep(0)
     setError('')
@@ -314,7 +291,7 @@ export default function GuidePage() {
                     <>
                       <span className={styles.breadcrumbSep}>›</span>
                       <button
-                        onClick={() => { setStep('category'); setSelectedCategory(''); setGuides([]); setVideo(null) }}
+                        onClick={() => { setStep('category'); setSelectedCategory(''); setGuides([]);}}
                         className={selectedCategory ? styles.breadcrumbLink : styles.breadcrumbCurrent}
                       >
                         {selectedPet}
@@ -418,7 +395,7 @@ export default function GuidePage() {
                   ) : guides.length === 0 ? (
                     <div className={styles.emptyState}>
                       <h2>No guide steps found</h2>
-                      <p>This category has no step-by-step guide. Check the Educational Videos section instead.</p>
+                      <p>This category has no step-by-step guide.</p>
                     </div>
                   ) : (
                     <div className={styles.contentList}>
@@ -428,8 +405,8 @@ export default function GuidePage() {
                             <span className={styles.summaryTitle}>{selectedCategory}</span>
                             <span className={styles.summaryMeta}>
                               {guides.length > 0 && `${guides.length} step${guides.length === 1 ? '' : 's'}`}
-                              {guides.length > 0 && video ? ' · ' : ''}
-                              {video ? 'video' : ''}
+                              {guides.length > 0 && guides.some(g => g.videoUrl) ? ' · ' : ''}
+                              {guides.some(g => g.videoUrl) ? 'video' : ''}
                             </span>
                           </span>
                           <span className={styles.summaryAction}>
@@ -501,42 +478,6 @@ export default function GuidePage() {
                               </button>
                             </div>
                           )}
-
-                          {/* Educational video */}
-                          {video && (
-                            <div className={styles.videoBlock}>
-                              <p className={styles.videoLabel}>Educational video</p>
-                              <div className={styles.videoList}>
-                                <div>
-                                  <h3 className={styles.videoTitle}>{video.title}</h3>
-                                  {video.description && (
-                                    <p className={styles.videoDescription}>{video.description}</p>
-                                  )}
-                                  {toEmbedUrl(video.videoUrl) ? (
-                                    <div className={styles.videoEmbed}>
-                                      <iframe
-                                        className={styles.videoIframe}
-                                        src={toEmbedUrl(video.videoUrl)!}
-                                        title={video.title}
-                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                        allowFullScreen
-                                      />
-                                    </div>
-                                  ) : (
-                                    <a
-                                      href={video.videoUrl}
-                                      target="_blank"
-                                      rel="noreferrer"
-                                      className={styles.videoFallback}
-                                    >
-                                      Watch video
-                                    </a>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          )}
-
                         </div>
                       </details>
                     </div>

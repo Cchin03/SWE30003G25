@@ -16,7 +16,7 @@ export type Guide = {
   contentID: string
   title: string
   stepNumber: number
-  instruction:string
+  instruction: string
   videoUrl?:  string | null
 }
 
@@ -135,9 +135,11 @@ export async function getEmergencyCategories(petType: string): Promise<string[]>
 export async function viewPublishedFirstAidContent(): Promise<FirstAidContentBundle[]> {
   // Query from content_review with status filter to correctly get only validated rows.
   // Using content_review as the root avoids the PostgREST !inner join filter limitation. (WC)
+  // Note: video for display now comes from guide.videoUrl (per step), not educational_video —
+  // educational_video is no longer joined here, but its CRUD functions elsewhere are unaffected. (WC)
   const { data, error } = await supabase
     .from('content_review')
-    .select('first_aid_content(*, guide(*), educational_video(*))')
+    .select('first_aid_content(*, guide(*))')
     .eq('status', 'published')
   if (error) throw new Error(error.message)
   const rows = (data ?? [])
@@ -146,9 +148,9 @@ export async function viewPublishedFirstAidContent(): Promise<FirstAidContentBun
     .map((row: any) => ({
       ...row,
       guide: [...(row.guide ?? [])].sort((a: Guide, b: Guide) => a.stepNumber - b.stepNumber),
-      educational_video: row.educational_video ?? [],
+      educational_video: [],
     }))
-    .filter((row: any) => row.guide.length > 0 || row.educational_video.length > 0)
+    .filter((row: any) => row.guide.length > 0)
   // Sort by petType then emergencyCategory
   rows.sort((a: any, b: any) =>
     a.petType.localeCompare(b.petType) || a.emergencyCategory.localeCompare(b.emergencyCategory)
