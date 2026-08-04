@@ -460,7 +460,7 @@ export default function GuidePage() {
                           {/* Prev / Next navigation */}
                           {guides.length > 1 && (
                             <div className={styles.stepNavActions}>
-                              <button
+                              {/* <button
                                 type="button"
                                 onClick={() => setActiveStep(s => Math.max(0, s - 1))}
                                 disabled={activeStep === 0}
@@ -475,7 +475,7 @@ export default function GuidePage() {
                                 className={styles.stepNavNext}
                               >
                                 Next →
-                              </button>
+                              </button> */}
                             </div>
                           )}
                         </div>

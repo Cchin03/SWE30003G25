@@ -5,11 +5,14 @@ import Link from "next/link";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 
+import supabase from '@/lib/supabase'
+
 const heroSlides = [
   "/images/dog.jpg",
   "/images/cat.jpg",
   "/images/hamster.jpg",
 ];
+
 
 // The services array defines the different services offered by the application, such as the first-aid guide, educational videos, quizzes, emergency service, and enquiry submission. 
 // Each service has an icon, title, description, and a link to the corresponding page where users can access that service. This array is used to dynamically render the services section on the homepage. (WC)
@@ -81,6 +84,30 @@ export default function HomePage() {
     }, 5000);
     return () => clearInterval(timer);
   }, []);
+
+  const [isPetOwner, setIsPetOwner] = useState(false)
+const [authLoading, setAuthLoading] = useState(true)
+ useEffect(() => {
+    async function checkRole() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single()
+
+        if (profile?.role === 'pet_owner') {
+          setIsPetOwner(true)
+        }
+      } finally {
+        setAuthLoading(false)
+      }
+    }
+    checkRole()
+  }, [])
 
   return (
     <main>
@@ -238,16 +265,27 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* CTA banner */}
-      <section style={{ padding: "56px 16px", backgroundColor: "#dc2626", textAlign: "center", color: "white" }}>
-        <h2 style={{ fontSize: "30px", fontWeight: "bold", marginBottom: "12px" }}>Ready to Get Started?</h2>
-        <p style={{ marginBottom: "24px", color: "#fecaca" }}>
-          Register now to access all first aid guides, videos and quizzes for free.
-        </p>
-        <Link href="/register" style={{ padding: "12px 32px", backgroundColor: "white", color: "#dc2626", fontWeight: "bold", borderRadius: "4px", textDecoration: "none" }}>
-          Register Now
-        </Link>
-      </section>
+      {/* Auth loading spinner */}
+        {authLoading && (
+          <div style={{ textAlign: 'center', padding: '60px 0', color: '#9ca3af', fontSize: '15px' }}>
+            Checking access...
+          </div>
+        )}
+        {/* Hide while user login */}
+        {!authLoading && !isPetOwner && (
+          <>
+          {/* CTA banner */}
+          <section style={{ padding: "56px 16px", backgroundColor: "#dc2626", textAlign: "center", color: "white" }}>
+            <h2 style={{ fontSize: "30px", fontWeight: "bold", marginBottom: "12px" }}>Ready to Get Started?</h2>
+            <p style={{ marginBottom: "24px", color: "#fecaca" }}>
+              Register now to access all first aid guides, videos and quizzes for free.
+            </p>
+            <Link href="/register" style={{ padding: "12px 32px", backgroundColor: "white", color: "#dc2626", fontWeight: "bold", borderRadius: "4px", textDecoration: "none" }}>
+              Register Now
+            </Link>
+          </section>
+          </>
+        )}
 
       <Footer />
     </main>

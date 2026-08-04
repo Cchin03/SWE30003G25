@@ -68,6 +68,7 @@ export default function Navbar() {
 
   async function handleLogout() {
     await supabase.auth.signOut();
+    window.location.href = "/"; // full page reload, no client-side routing
     setUser(null);
     setUnreadCount(0);
     router.push("/");
@@ -130,6 +131,7 @@ export default function Navbar() {
                 style={{ padding: "8px 16px", border: "1px solid #dc2626", color: "#dc2626", borderRadius: "4px", fontSize: "14px", cursor: "pointer", backgroundColor: "white" }}
               >
                 Logout
+                
               </button>
             </>
           ) : (

@@ -192,7 +192,7 @@ export default function VideoPage() {
                 Pet Owners Only
               </h2>
               <p style={{ color: '#6b7280', fontSize: '15px', maxWidth: '420px', margin: '0 auto 28px', lineHeight: '1.6' }}>
-                The First-Aid Guide is available to registered Pet Owners only.
+                The Enquiry is available to registered Pet Owners only.
                 Please log in with a Pet Owner account to access this content.
               </p>
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -229,7 +229,7 @@ export default function VideoPage() {
             </div>
           )}
 
-          {/* Main guide content — only shown to pet owners */}
+          {/* Main content — only shown to pet owners */}
           {!authLoading && isPetOwner && (
             <>
             {/* Breadcrumb */}

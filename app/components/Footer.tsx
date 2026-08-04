@@ -15,9 +15,8 @@ export default function Footer() {
           <h4 style={{ color: "white", fontWeight: "600", marginBottom: "12px" }}>Quick Links</h4>
           <ul style={{ listStyle: "none", padding: 0, fontSize: "13px" }}>
             <li style={{ marginBottom: "8px" }}><Link href="/" style={{ color: "#9ca3af", textDecoration: "none" }}>Home</Link></li>
-            <li style={{ marginBottom: "8px" }}><Link href="/about" style={{ color: "#9ca3af", textDecoration: "none" }}>About Us</Link></li>
-            <li style={{ marginBottom: "8px" }}><Link href="/guide" style={{ color: "#9ca3af", textDecoration: "none" }}>First Aid Guide</Link></li>
-            <li style={{ marginBottom: "8px" }}><Link href="/contact" style={{ color: "#9ca3af", textDecoration: "none" }}>Contact Us</Link></li>
+            <li style={{ marginBottom: "8px" }}><Link href="/FirstAidContent/guide" style={{ color: "#9ca3af", textDecoration: "none" }}>First Aid Guide</Link></li>
+            <li style={{ marginBottom: "8px" }}><Link href="/emergency" style={{ color: "#9ca3af", textDecoration: "none" }}>Contact Us</Link></li>
           </ul>
         </div>
         <div>
